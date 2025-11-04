@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Threading;
 
-namespace CegsLL6.Views;
+namespace CegsAeon.Views;
 
 /// <summary>
 /// Interaction logic for ControlPanel.xaml
@@ -29,6 +29,7 @@ public partial class ControlPanel : AeonHacs.Wpf.Views.ControlPanel
     public ControlPanel(HacsBase hacs) : base(hacs)
     {
         InitializeComponent();
+
         PopulateProcessSelector();
 
         if (Hacs is Cegs cegs)

@@ -1,10 +1,10 @@
-﻿<wpf:ControlPanel x:Class="CegsLL6.Views.ControlPanel"
+﻿<wpf:ControlPanel x:Class="CegsAeon.Views.ControlPanel"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:cegs="clr-namespace:AeonHacs.Components"
-        xmlns:local="clr-namespace:CegsLL6.Views"
+        xmlns:local="clr-namespace:CegsAeon.Views"
         xmlns:wpf="http://schemas.aeonhacs.com/wpf"
         mc:Ignorable="d">
 
@@ -20,7 +20,7 @@
     <!--==============================================-->
     <Grid>
         <!-- Simplify references to Cegs properties -->
-        <wpf:View x:Name="Cegs" Component="CegsLL6" Visibility="Collapsed" />
+        <wpf:View x:Name="Cegs" Component="CegsAeon" Visibility="Collapsed" />
 
         <!-- System Uptime -->
         <StackPanel Margin="10" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -44,7 +44,9 @@
                     <!-- Process -->
                     <StackPanel Orientation="Horizontal">
                         <Label x:Name="ProcessTime" AutomationProperties.HelpText="Process Run Time"
-                                Content="{Binding Component.ProcessTime, ElementName=Cegs, Converter={StaticResource TimeSpanConverter}, FallbackValue='23:59:59'}"
+                                Content="{Binding Component.ProcessTime, ElementName=Cegs, 
+                                    Converter={StaticResource TimeSpanConverter}, 
+                                    TargetNullValue=00:00:00, FallbackValue=00:00:00}"
                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}" BorderThickness="0.5"
                                 Margin="2,2,3,2" Padding="3,0,3,0" HorizontalContentAlignment="Right" />
                         <ComboBox x:Name="ProcessSelector" AutomationProperties.HelpText="Process"
@@ -55,28 +57,40 @@
                     <!-- Process Step -->
                     <StackPanel Orientation="Horizontal">
                         <Label x:Name="ProcessStepTime" AutomationProperties.HelpText="Process Step Time"
-                                Content="{Binding Component.ProcessStep.Elapsed, ElementName=Cegs, Converter={StaticResource TimeSpanConverter}, FallbackValue='23:59:59'}"
+                                Content="{Binding Component.ProcessStep.Latest.Elapsed, ElementName=Cegs, 
+                                    Converter={StaticResource TimeSpanConverter},
+                                    TargetNullValue=00:00:00, FallbackValue=00:00:00}"
                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}" BorderThickness="0.5"
                                 Margin="2,2,3,2" Padding="3,0,3,0" HorizontalContentAlignment="Right" />
                         <Border Width="350"  AutomationProperties.HelpText="Process Step"
                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}" BorderThickness="0.5"
                                 Margin="0,2,3,2" Padding="3,0" >
-                            <TextBlock Text="{Binding Component.ProcessStep.CurrentStep.Description, ElementName=Cegs, FallbackValue=''}" 
-                                     VerticalAlignment="Center"/>
+                            <TextBlock
+                                DataContext="{Binding Component.ProcessStep, ElementName=Cegs}"
+                                Text="{Binding Latest.Description, TargetNullValue=''}"
+                                wpf:View.Component="{Binding .}"
+                                VerticalAlignment="Center"
+                                TextTrimming="CharacterEllipsis" />
                         </Border>
                     </StackPanel>
 
                     <!-- Process Substep -->
                     <StackPanel Orientation="Horizontal">
                         <Label x:Name="ProcessSubstepTime" AutomationProperties.HelpText="Process Substep Time"
-                                Content="{Binding Component.ProcessSubStep.Elapsed, ElementName=Cegs, Converter={StaticResource TimeSpanConverter}, FallbackValue='23:59:59'}" 
+                                Content="{Binding Component.ProcessSubStep.Latest.Elapsed, ElementName=Cegs, 
+								    Converter={StaticResource TimeSpanConverter}, 
+									TargetNullValue=00:00:00, FallbackValue=00:00:00}"
                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}" BorderThickness="0.5"
                                 Margin="2,2,3,2" Padding="3,0,3,0" HorizontalContentAlignment="Right" />
                         <Border AutomationProperties.HelpText="Process Substep"
                                 BorderBrush="{x:Static SystemColors.ActiveBorderBrush}" BorderThickness="0.5"
-                                Width="350" Margin="0,2,3,2" Padding="3,0">
-                            <TextBlock Text="{Binding Component.ProcessSubStep.CurrentStep.Description, ElementName=Cegs, FallbackValue=''}" 
-                                    VerticalAlignment="Center"/>
+                                Width="350" Margin="0,2,3,2" Padding="3,0" >
+                            <TextBlock
+                                DataContext="{Binding Component.ProcessSubStep, ElementName=Cegs}"
+                                Text="{Binding Latest.Description, TargetNullValue=''}"
+                                wpf:View.Component="{Binding .}"
+                                VerticalAlignment="Center"
+                                TextTrimming="CharacterEllipsis" />
                         </Border>
                     </StackPanel>
                 </StackPanel>
@@ -109,10 +123,8 @@
                     </Style.Triggers>
                 </Style>
             </StackPanel.Style>
-            <TextBlock VerticalAlignment="Center" >
-                <Run Text="Sample:" />
-                <Run Text="{Binding Component.Sample, ElementName=Cegs, Converter={StaticResource ToStringConverter}}" />
-            </TextBlock>
+            <TextBlock Text="Sample: " VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Component.Sample, ElementName=Cegs, Converter={StaticResource ToStringConverter}}" VerticalAlignment="Center" />
         </StackPanel>
 
         <DockPanel LastChildFill="True">
@@ -125,10 +137,10 @@
             <!--==============================================-->
             <Canvas DockPanel.Dock="Left" Width="760" Height="350" Margin="0,10,0,80" VerticalAlignment="Top" HorizontalAlignment="Center">
                 <local:VS Canvas.Left="223" Canvas.Top="154"/>
-                <wpf:IM6 Canvas.Left="0" Canvas.Top="49" />
-                <wpf:CT Canvas.Left="267" Canvas.Top="124" />
+                <wpf:IM2 Canvas.Left="0" Canvas.Top="118" />
+                <wpf:CT Canvas.Left="267" Canvas.Top="124" PressureSensorType="MKS_722_LP" />
                 <wpf:VTT Canvas.Left="389" Canvas.Top="133" />
-                <wpf:MC Canvas.Left="441" Canvas.Top="98" />
+                <wpf:MC Canvas.Left="441" Canvas.Top="98" PressureSensorType="MKS_DMB" />
                 <wpf:Split Data="M0,0 h21" Canvas.Left="493" Canvas.Top="133" />
                 <wpf:GM6 Canvas.Left="532" Canvas.Top="49" />
 

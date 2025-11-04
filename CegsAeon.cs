@@ -1,4 +1,9 @@
-﻿namespace AeonHacs.Components;
+﻿using System;
+using AeonHacs;
+namespace AeonHacs.Components;
+using AeonHacs.Utilities;
+using System.Threading.Tasks;
+using static AeonHacs.Utilities.Utility;
 
 public partial class CegsAeon : Cegs
 {
@@ -146,12 +151,340 @@ public partial class CegsAeon : Cegs
     #endregion Process Management
 
     #region Test functions
+    void ValvePositionDriftTest()
+    {
+        var v = FirstOrDefault<RS232Valve>();
+        var pos = v.ClosedValue / 2;
+        var op = new ActuatorOperation()
+        {
+            Name = "test",
+            Value = pos,
+            Incremental = false
+        };
+        v.ActuatorOperations.Add(op);
 
-    /// <summary>
-    /// General-purpose code tester. Put whatever you want here.
-    /// </summary>
+        v.DoWait(op);
+
+        //op.Incremental = true;
+        var rand = new Random();
+        for (int i = 0; i < 100; i++)
+        {
+            op.Value = pos + rand.Next(-15, 16);
+            v.DoWait(op);
+        }
+        op.Value = pos;
+        op.Incremental = false;
+        v.DoWait(op);
+
+        v.ActuatorOperations.Remove(op);
+    }
+
+    protected override void MeasureRemainingVolumes()
+    {
+        Find<VolumeCalibration>("MCP1, MCP2").Calibrate();
+        Find<VolumeCalibration>("Split, GM").Calibrate();
+        Find<VolumeCalibration>("VTT, CT, IM").Calibrate();
+        Find<VolumeCalibration>("VM").Calibrate();
+    }
+
+    void TestPort(IPort p)
+    {
+        for (int i = 0; i < 5; ++i)
+        {
+            p.Open();
+            p.Close();
+        }
+        p.Open();
+        WaitMinutes(5);
+        p.Close();
+    }
+
+    // two minutes of moving the valve at a moderate pace
+    void TestValve(IValve v)
+    {
+        SampleLog.Record($"Operating {v.Name} for 2 minutes");
+        for (int i = 0; i < 24; ++i)
+        {
+            v.CloseWait();
+            WaitSeconds(2);
+            v.OpenWait();
+            WaitSeconds(2);
+        }
+    }
+
+    void TestUpstream(IValve v)
+    {
+        SampleLog.Record($"Checking {v.Name}'s 10-minute bump");
+        v.OpenWait();
+        WaitMinutes(5);     // empty the upstream side (assumes the downstream side is under vacuum)
+        v.CloseWait();
+        WaitMinutes(10);    // let the upstream pressure rise for 10 minutes
+        v.OpenWait();       // how big is the pressure bump?
+    }
+
+    protected void CalibrateManualHeaters()
+    {
+        var tc = Find<IThermocouple>("tCal");
+        CalibrateManualHeater(Find<IHeater>("hIP1CCQ"), tc);
+    }
+
+    protected virtual void TestGasSupplies()
+    {
+        //TestPressurize("H2.GM", 100);
+        //TestPressurize("H2.GM", 900);
+        //TestPressurize("He.MC", 80);
+        //TestPressurize("He.GM", 800);
+        //TestAdmit("He.GM", 800);
+        //TestAdmit("He.IM", 800);
+        //TestPressurize("CO2.MC", 75);
+        TestPressurize("CO2.MC", 900);
+        //TestAdmit("O2.IM", IMO2Pressure);
+    }
+
+    protected void TestValveRaceCondition()
+    {
+        var valves = FindAll<IValve>(v => v.IsOpened && !(v is RS232Valve));
+        var step = ProcessStep.Start("Test valve race condition.");
+        var substep = ProcessSubStep.Start("");
+        for (int i = 0; i < 5000; i++)
+        {
+            substep.Update($"{i + 1} / 5000");
+            var valve = randomValve();
+            if (valve.IsClosed)
+            {
+                if (Random.Shared.Next(2) < 1)
+                    valve.Open();
+                else
+                    valve.OpenWait();
+            }
+            else
+            {
+                if (Random.Shared.Next(2) < 1)
+                    valve.Close();
+                else
+                    valve.CloseWait();
+            }
+            Task.Delay((Random.Shared.Next(4) + 1) * 500).Wait();
+        }
+        substep.End();
+
+        valves.Open();
+
+        IValve randomValve()
+        {
+            return valves[Random.Shared.Next(valves.Count)];
+        }
+    }
+
     protected override void Test()
     {
+        //var gr6 = GM.Ports.Last();
+        //var manifold = Manifold(gr6);
+        //manifold.JoinToVacuum();
+        //double leakRate = HoldForLeakTightness(manifold);
+        //TestLog.Record($"{manifold.Name} leak rate test: {leakRate:0.00e0}");
+        //return;
+
+        //var gr6LeakRate = PortLeakRate(gr6);
+        //return;
+
+        //var gmLeakRate = SectionLeakRate(GM, 3e-5);
+        //gr6.Open();
+        //var gr6LeakRate = PortLeakRate(gr6);
+        //Notify.WaitForOperator("Open the syringe valve.");
+        //var syringeLeakRate = PortLeakRate(gr6);
+        //Hacs.SystemLog.Record("Leak Rate Test\r\n" +
+        //    $"\t{GM.Name}: {gmLeakRate:0.00e0} Torr L/sec\r\n" +
+        //    $"\t{gr6.Name}: {gr6LeakRate:0.00e0} Torr L/sec\r\n" +
+        //    $"\tSyringe: {syringeLeakRate:0.00e0} Torr L/sec");
+        //GM.VacuumSystem.Evacuate();
+        //return;
+
+        //TestValveRaceCondition();
+        //return;
+
+        //var grs = new List<IHeater>()
+        //{
+        //    Find<IHeater>("hGR2"),
+        //    Find<IHeater>("hGR4"),
+        //    Find<IHeater>("hGR6"),
+        //    //Find<IHeater>("hGR7"),
+        //    //Find<IHeater>("hGR9"),
+        //    //Find<IHeater>("hGR11")
+        //}.ToArray();
+        //PidStepTest(grs);
+        //return;
+
+        //CalibrateManualHeaters();
+        //return;
+
+        //var ips = new List<IInletPort>()
+        //{
+        //    Find<IInletPort>("IP1"),
+        //};
+        //ips.ForEach(ip => ip.QuartzFurnace.TurnOn());
+        //WaitMinutes(10);
+        //PidStepTest(ips.Select(ip => ip.SampleFurnace).Cast<IHeater>().ToArray());
+        //ips.ForEach(ip => ip.QuartzFurnace.TurnOff());
+        //return;
+
+        VttWarmStepTest();
+        return;
+
+
+        //TestGasSupplies();
+        //return;
+
+        //FastOpenLine();
+        //for (int i = 0; i < 100; ++i)
+        //{
+        //    //ExercisePorts(IM);
+        //    //ExercisePorts(GM);
+
+        //    //MC.PathToVacuum?.Open();     // Opens GM, too
+        //    //VTT.PathToVacuum?.Open();
+        //    //IM.PathToVacuum?.Open();
+        //    //IM_CT.Open();
+        //    //VTT_MC.Open();
+
+        //    var list = FindAll<CpwValve>(v => v.IsOpened && !(v is RS232Valve));
+        //    list.ForEach(v => 
+        //    {
+        //        v.CloseWait();
+        //        v.OpenWait();
+        //    });
+        //    WaitMinutes(30);
+        //}
+
+        //for (int i = 0; i < 5; ++i)
+        //{
+        //    TestValve(Find<IValve>("vIML_IMC"));
+        //    TestValve(Find<IValve>("vIMR_IMC"));
+
+        //    TestValve(Find<IValve>("vIMC_CT"));
+        //    TestValve(Find<IValve>("vCT_VTT"));
+        //    TestValve(Find<IValve>("vVTT_MC"));
+        //    TestValve(Find<IValve>("vMC_MCP1"));
+        //    TestValve(Find<IValve>("vMC_MCP2"));
+        //    TestValve(Find<IValve>("vMC_Split"));
+
+        //    TestValve(Find<IValve>("vGML_GMC"));
+        //    TestValve(Find<IValve>("vGMR_GMC"));
+
+        //    TestValve(Find<IValve>("vIMC_VM"));
+        //    TestValve(Find<IValve>("vCT_VM"));
+        //    TestValve(Find<IValve>("vGMC_VM"));
+
+        //}
+        //return;
+
+        //TestPort(Find<IPort>("IP2"));
+        //TestPort(Find<IPort>("IP3"));
+        //TestPort(Find<IPort>("IP4"));
+        //TestPort(Find<IPort>("IP5"));
+        //TestPort(Find<IPort>("IP6"));
+
+        //TestPort(Find<IPort>("GR7"));
+        //TestPort(Find<IPort>("GR8"));
+        //TestPort(Find<IPort>("GR9"));
+        //TestPort(Find<IPort>("GR10"));
+        //TestPort(Find<IPort>("GR11"));
+        //TestPort(Find<IPort>("GR12"));
+
+        //MC.Evacuate(OkPressure);
+        //TestValve(Find<IValve>("v_MCP0"));
+        //return;
+
+        //ProcessStep.Start("Simulating Sample Run");
+        //Wait(10000);
+        //ProcessStep.End();
+
+        //Admit("O2", IM, null, IMO2Pressure);
+
+        //var gs = Find<GasSupply>("H2.GM");
+        //gs.Pressurize(100);
+        //gs.Pressurize(900);
+
+        //var gs = Find<GasSupply>("He.GM");
+        //gs.Admit(800);
+        //WaitSeconds(10);
+
+        //var gs = Find<GasSupply>("He.IM");
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs.Admit(800);
+        //WaitSeconds(10);
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs = Find<GasSupply>("He.MC");
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs.Pressurize(95);
+        //WaitSeconds(10);
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs = Find<GasSupply>("CO2.MC");
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs.Pressurize(75);
+        //WaitSeconds(10);
+        //gs.Destination.Evacuate(OkPressure);
+
+        //gs.Pressurize(1000);
+        //WaitSeconds(10);
+        //gs.Destination.Evacuate(OkPressure);
+
+        //InletPort = Find<InletPort>("IP1");
+        //AdmitIPO2();
+        //Collect();
+
+        //var grs = new List<IGraphiteReactor>();
+        //grs.AddRange(GraphiteReactors.Where(gr => gr.Prepared));
+        //CalibrateGRH2(grs);
+
+        //var gr1 = Find<GraphiteReactor>("GR1");
+        //var gr2 = Find<GraphiteReactor>("GR2");
+        //GrGmH2(gr1, out ISection gm, out IGasSupply gs);
+        //gr1.Open();
+        //gr2.Open();
+        //gm.Evacuate(OkPressure);
+        //gr1.Close();
+        //gr2.Close();
+
+        //gs.Pressurize(IronPreconditionH2Pressure);
+
+        //var p1 = gm.Manometer.WaitForAverage(60);
+        //gr1.Open();
+        //WaitSeconds(10);
+        //gr1.Close();
+        //WaitSeconds(10);
+        //var p2 = gm.Manometer.WaitForAverage(60);
+        //SampleLog.Record($"dpGM for GR1: {p1:0.00} => {p2:0.00}");
+
+        //p1 = gm.Manometer.WaitForAverage(60);
+        //gr2.Open();
+        //WaitSeconds(10);
+        //gr2.Close();
+        //WaitSeconds(10);
+        //p2 = gm.Manometer.WaitForAverage(60);
+        //SampleLog.Record($"dpGM for GR2: {p1:0.00} => {p2:0.00}");
+
+        // Test CTFlowManager
+        // Control flow valve to maintain constant downstream pressure until flow valve is fully opened.
+        //SampleLog.Record($"Bleed pressure: {FirstTrapBleedPressure} Torr");
+        //Bleed(FirstTrap, FirstTrapBleedPressure);
+
+        // Open flow bypass when conditions allow it without producing an excessive
+        // downstream pressure spike. Then wait for the spike to be evacuated.
+        var substep = ProcessSubStep.Start("Wait for remaining pressure to bleed down");
+        WaitFor(() => IM.Pressure - FirstTrap.Pressure < FirstTrapFlowBypassPressure);
+        FirstTrap.Open();   // open bypass if available
+        WaitFor(() => FirstTrap.Pressure < FirstTrapEndPressure);
+        substep.End();
+
+
+        //VolumeCalibrations["GR1, GR2"]?.Calibrate();
+        //return;
     }
 
     #endregion Test functions
